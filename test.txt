@@ -1,0 +1,110 @@
+import tkinter as tk
+from tkinter import filedialog, messagebox
+import subprocess
+import sys
+import os
+import threading
+
+
+def convert():
+    file_path = filedialog.askopenfilename(
+        title="Выберите Python-файл",
+        filetypes=[("Python files", "*.py")]
+    )
+
+    if not file_path:
+        return
+
+    output_dir = filedialog.askdirectory(
+        title="Выберите папку для сохранения"
+    )
+
+    if not output_dir:
+        return
+
+    def build():
+        try:
+            status.config(text="Подготовка...")
+
+            # Установка PyInstaller
+            subprocess.run(
+                [sys.executable, "-m", "pip", "install", "pyinstaller"],
+                check=True
+            )
+
+            status.config(text="Компиляция...")
+
+            # Команда сборки
+            command = [
+                sys.executable,
+                "-m", "PyInstaller",
+                "--onefile",
+                "--noconfirm",
+                "--distpath", output_dir,
+                "--workpath", os.path.join(output_dir, "build"),
+                "--specpath", output_dir
+            ]
+
+            # Режим без консоли
+            if no_console.get():
+                command.append("--noconsole")
+
+            command.append(file_path)
+
+            subprocess.run(command, check=True)
+
+            status.config(text="Готово!")
+
+            messagebox.showinfo(
+                "Успешно",
+                f"EXE-файл создан!\n\nПапка: {output_dir}"
+            )
+
+        except Exception as e:
+            status.config(text="Ошибка!")
+            messagebox.showerror("Ошибка", str(e))
+
+    threading.Thread(target=build, daemon=True).start()
+
+
+# Интерфейс
+root = tk.Tk()
+root.title("Python to EXE Converter")
+root.geometry("400x250")
+root.resizable(False, False)
+
+title = tk.Label(
+    root,
+    text="Python → EXE Converter",
+    font=("Arial", 17, "bold")
+)
+title.pack(pady=25)
+
+no_console = tk.BooleanVar(value=False)
+
+checkbox = tk.Checkbutton(
+    root,
+    text="Скрыть консоль",
+    variable=no_console,
+    font=("Arial", 10)
+)
+checkbox.pack(pady=5)
+
+button = tk.Button(
+    root,
+    text="Выбрать Python-файл и конвертировать",
+    command=convert,
+    font=("Arial", 10),
+    width=35,
+    height=2
+)
+button.pack(pady=15)
+
+status = tk.Label(
+    root,
+    text="Ожидание...",
+    font=("Arial", 10)
+)
+status.pack(pady=5)
+
+root.mainloop()
